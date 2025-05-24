@@ -57,35 +57,67 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
   const startTime = useRef(0);
   const solutionSteps = useRef<any[]>([]);
   const solutionBoard = useRef<number[][]>([]);
+  const userDecisionTree = useRef<TreeNode[]>([]);
+
+  // Generate a random valid Sudoku puzzle
+  const generateRandomSudoku = (difficulty: string): number[][] => {
+    // Start with a complete valid grid
+    const grid = Array(9).fill(null).map(() => Array(9).fill(0));
+    
+    // Fill the grid using a simple pattern
+    const fillGrid = (grid: number[][]): boolean => {
+      for (let row = 0; row < 9; row++) {
+        for (let col = 0; col < 9; col++) {
+          if (grid[row][col] === 0) {
+            const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+            // Shuffle numbers for randomness
+            for (let i = numbers.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [numbers[i], numbers[j]] = [numbers[j], numbers[i]];
+            }
+            
+            for (const num of numbers) {
+              if (isValidSudoku(grid, row, col, num)) {
+                grid[row][col] = num;
+                if (fillGrid(grid)) return true;
+                grid[row][col] = 0;
+              }
+            }
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+
+    fillGrid(grid);
+    
+    // Remove numbers based on difficulty
+    const cellsToRemove = difficulty === 'easy' ? 40 : difficulty === 'medium' ? 50 : 60;
+    const positions = [];
+    for (let i = 0; i < 81; i++) {
+      positions.push(i);
+    }
+    
+    // Shuffle positions
+    for (let i = positions.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [positions[i], positions[j]] = [positions[j], positions[i]];
+    }
+    
+    // Remove numbers
+    for (let i = 0; i < cellsToRemove && i < positions.length; i++) {
+      const pos = positions[i];
+      const row = Math.floor(pos / 9);
+      const col = pos % 9;
+      grid[row][col] = 0;
+    }
+    
+    return grid;
+  };
 
   const generateSudokuPuzzle = (difficulty: string): number[][] => {
-    const size = 9;
-    
-    const easyPuzzle = [
-      [5,3,0,0,7,0,0,0,0],
-      [6,0,0,1,9,5,0,0,0],
-      [0,9,8,0,0,0,0,6,0],
-      [8,0,0,0,6,0,0,0,3],
-      [4,0,0,8,0,3,0,0,1],
-      [7,0,0,0,2,0,0,0,6],
-      [0,6,0,0,0,0,2,8,0],
-      [0,0,0,4,1,9,0,0,5],
-      [0,0,0,0,8,0,0,7,9]
-    ];
-
-    const mediumPuzzle = [
-      [0,0,0,6,0,0,4,0,0],
-      [7,0,0,0,0,3,6,0,0],
-      [0,0,0,0,9,1,0,8,0],
-      [0,0,0,0,0,0,0,0,0],
-      [0,5,0,1,8,0,0,0,3],
-      [0,0,0,3,0,6,0,4,5],
-      [0,4,0,2,0,0,0,6,0],
-      [9,0,3,0,0,0,0,0,0],
-      [0,2,0,0,0,0,1,0,0]
-    ];
-
-    return difficulty === 'easy' ? easyPuzzle : difficulty === 'medium' ? mediumPuzzle : easyPuzzle;
+    return generateRandomSudoku(difficulty);
   };
 
   const generateNQueensPuzzle = (size: number): number[][] => {
@@ -226,6 +258,42 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
     return 0;
   };
 
+  // Build decision tree for user moves
+  const buildUserDecisionTree = (moves: any[]): TreeNode[] => {
+    const tree: TreeNode[] = [];
+    
+    moves.forEach((move, index) => {
+      const node: TreeNode = {
+        id: `user-${move.row}-${move.col}-${index}`,
+        state: {
+          row: move.row,
+          col: move.col,
+          value: move.value,
+          action: move.action || 'place'
+        },
+        children: [],
+        isValid: move.isValid !== false,
+        isCurrent: index === moves.length - 1,
+        isBacktrack: false,
+        depth: index
+      };
+      
+      if (index === 0) {
+        tree.push(node);
+      } else {
+        // Find parent and add as child
+        const parent = tree[Math.max(0, index - 1)];
+        if (parent) {
+          parent.children.push(node);
+        } else {
+          tree.push(node);
+        }
+      }
+    });
+    
+    return tree;
+  };
+
   const getHint = useCallback(() => {
     if (solutionBoard.current.length === 0) {
       const boardCopy = state.board.map(row => [...row]);
@@ -262,6 +330,7 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
       let newUserMoves = prevState.userMoves;
       let newViolations = new Set<string>();
       let progressChange = 0;
+      let moveHistory = [...(userDecisionTree.current || [])];
 
       if (puzzleType === 'sudoku') {
         const oldValue = newBoard[row][col];
@@ -273,7 +342,15 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
           newBoard[row][col] = 0;
         }
         
-        // Calculate progress change
+        // Add move to history
+        moveHistory.push({
+          row,
+          col,
+          value: newBoard[row][col],
+          action: newBoard[row][col] === 0 ? 'remove' : 'place',
+          isValid: newBoard[row][col] === 0 || isValidSudoku(newBoard, row, col, newBoard[row][col])
+        });
+        
         if (oldValue === 0 && newBoard[row][col] !== 0) {
           progressChange = 1;
         } else if (oldValue !== 0 && newBoard[row][col] === 0) {
@@ -289,7 +366,7 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
               newBoard[r][c] = 0;
               if (!isValidSudoku(newBoard, r, c, num)) {
                 newViolations.add(`${r}-${c}`);
-                progressChange -= 0.5; // Penalty for violations
+                progressChange -= 0.5;
               }
               newBoard[r][c] = num;
             }
@@ -304,6 +381,16 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
           newBoard[row][col] = 0;
           progressChange = -1;
         }
+        
+        // Add move to history
+        moveHistory.push({
+          row,
+          col,
+          value: newBoard[row][col],
+          action: newBoard[row][col] === 1 ? 'place' : 'remove',
+          isValid: newBoard[row][col] === 0 || isValidNQueens(newBoard, row, col)
+        });
+        
         newUserMoves++;
 
         for (let r = 0; r < newBoard.length; r++) {
@@ -331,8 +418,21 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
           newUserMoves++;
           newBoard[row][col] = newUserMoves;
           progressChange = 1;
+          
+          // Add move to history
+          moveHistory.push({
+            row,
+            col,
+            value: newUserMoves,
+            action: 'move',
+            isValid: true
+          });
         }
       }
+
+      // Update user decision tree
+      userDecisionTree.current = moveHistory;
+      const newDecisionTree = buildUserDecisionTree(moveHistory);
 
       const newProgress = calculateProgress(newBoard, puzzleType);
       const maxProgress = Math.max(prevState.maxProgress, newProgress);
@@ -353,7 +453,8 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
         violations: newViolations,
         isUserSolved,
         progress: newProgress,
-        maxProgress
+        maxProgress,
+        decisionTree: newDecisionTree
       };
     });
   }, [puzzleType]);
@@ -530,6 +631,7 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
     stepIndex.current = 0;
     solutionSteps.current = [];
     solutionBoard.current = [];
+    userDecisionTree.current = [];
     startTime.current = Date.now();
   }, [puzzleType, difficulty, boardSize]);
 
@@ -544,15 +646,30 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
         state: step,
         children: [],
         isValid: step.isValid || false,
-        isCurrent: false,
+        isCurrent: index === stepIndex.current - 1,
         isBacktrack: step.isBacktracking || false,
         depth: step.row || 0
       };
       
       nodeMap.set(nodeId, node);
       
-      if (index === 0) {
+      if (index === 0 || step.isBacktracking) {
         tree.push(node);
+      } else {
+        // Find parent based on depth/backtracking
+        let parentIndex = index - 1;
+        while (parentIndex >= 0 && steps[parentIndex].isBacktracking) {
+          parentIndex--;
+        }
+        if (parentIndex >= 0) {
+          const parentId = `${steps[parentIndex].row}-${steps[parentIndex].col}-${parentIndex}`;
+          const parent = nodeMap.get(parentId);
+          if (parent) {
+            parent.children.push(node);
+          } else {
+            tree.push(node);
+          }
+        }
       }
     });
     
@@ -571,10 +688,19 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
       violations.add(`${currentStep.row}-${currentStep.col}`);
     }
 
+    // Update board for visualization
+    const newBoard = state.board.map(row => [...row]);
+    if (currentStep.action === 'place' && currentStep.value !== undefined) {
+      newBoard[currentStep.row][currentStep.col] = currentStep.value;
+    } else if (currentStep.action === 'backtrack') {
+      newBoard[currentStep.row][currentStep.col] = 0;
+    }
+
     const decisionTree = buildDecisionTree(solutionSteps.current.slice(0, stepIndex.current + 1));
 
     setState(prev => ({
       ...prev,
+      board: newBoard,
       currentState: currentStep,
       violations,
       decisionTree,
@@ -589,7 +715,7 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
 
     stepIndex.current++;
     return stepIndex.current < solutionSteps.current.length;
-  }, []);
+  }, [state.board]);
 
   const reset = useCallback(() => {
     initializePuzzle();

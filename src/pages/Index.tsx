@@ -400,7 +400,11 @@ const Index = () => {
               </TabsContent>
               
               <TabsContent value="tree" className="mt-4">
-                <DecisionTree tree={decisionTree} currentState={currentState} />
+                <DecisionTree 
+                  tree={decisionTree} 
+                  currentState={currentState} 
+                  isInteractive={mode === 'interactive'}
+                />
               </TabsContent>
               
               <TabsContent value="learn" className="mt-4">
