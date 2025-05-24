@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useRef } from 'react';
 
 interface TreeNode {
@@ -29,6 +30,8 @@ interface SolverState {
   isUserSolved: boolean;
   progress: number;
   maxProgress: number;
+  isPlaying: boolean;
+  showDecisionTree: boolean;
 }
 
 export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: number = 8) => {
@@ -50,7 +53,9 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
     userMoves: 0,
     isUserSolved: false,
     progress: 0,
-    maxProgress: 0
+    maxProgress: 0,
+    isPlaying: false,
+    showDecisionTree: false
   });
 
   const stepIndex = useRef(0);
@@ -58,6 +63,7 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
   const solutionSteps = useRef<any[]>([]);
   const solutionBoard = useRef<number[][]>([]);
   const userDecisionTree = useRef<TreeNode[]>([]);
+  const playInterval = useRef<NodeJS.Timeout | null>(null);
 
   // Generate a random valid Sudoku puzzle
   const generateRandomSudoku = (difficulty: string): number[][] => {
@@ -454,7 +460,7 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
         isUserSolved,
         progress: newProgress,
         maxProgress,
-        decisionTree: newDecisionTree
+        decisionTree: prevState.showDecisionTree ? newDecisionTree : []
       };
     });
   }, [puzzleType]);
@@ -625,7 +631,8 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
       userMoves: puzzleType === 'knights' ? 1 : 0,
       isUserSolved: false,
       progress: initialProgress,
-      maxProgress: initialProgress
+      maxProgress: initialProgress,
+      isPlaying: false
     }));
 
     stepIndex.current = 0;
@@ -696,7 +703,7 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
       newBoard[currentStep.row][currentStep.col] = 0;
     }
 
-    const decisionTree = buildDecisionTree(solutionSteps.current.slice(0, stepIndex.current + 1));
+    const decisionTree = state.showDecisionTree ? buildDecisionTree(solutionSteps.current.slice(0, stepIndex.current + 1)) : [];
 
     setState(prev => ({
       ...prev,
@@ -715,11 +722,60 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
 
     stepIndex.current++;
     return stepIndex.current < solutionSteps.current.length;
-  }, [state.board]);
+  }, [state.board, state.showDecisionTree]);
+
+  const play = useCallback(() => {
+    if (playInterval.current) return;
+
+    setState(prev => ({ ...prev, isPlaying: true }));
+    
+    playInterval.current = setInterval(() => {
+      const hasMoreSteps = step();
+      if (!hasMoreSteps) {
+        setState(prev => ({ ...prev, isPlaying: false }));
+        if (playInterval.current) {
+          clearInterval(playInterval.current);
+          playInterval.current = null;
+        }
+      }
+    }, 500);
+  }, [step]);
+
+  const pause = useCallback(() => {
+    setState(prev => ({ ...prev, isPlaying: false }));
+    if (playInterval.current) {
+      clearInterval(playInterval.current);
+      playInterval.current = null;
+    }
+  }, []);
+
+  const toggleDecisionTree = useCallback(() => {
+    setState(prev => {
+      const newShowDecisionTree = !prev.showDecisionTree;
+      let newDecisionTree = [];
+      
+      if (newShowDecisionTree) {
+        if (solutionSteps.current.length > 0) {
+          // Auto-solve tree
+          newDecisionTree = buildDecisionTree(solutionSteps.current.slice(0, stepIndex.current));
+        } else if (userDecisionTree.current.length > 0) {
+          // User move tree
+          newDecisionTree = buildUserDecisionTree(userDecisionTree.current);
+        }
+      }
+      
+      return {
+        ...prev,
+        showDecisionTree: newShowDecisionTree,
+        decisionTree: newDecisionTree
+      };
+    });
+  }, []);
 
   const reset = useCallback(() => {
+    pause();
     initializePuzzle();
-  }, [initializePuzzle]);
+  }, [initializePuzzle, pause]);
 
   const solve = useCallback(() => {
     console.log('Starting solve for:', puzzleType);
@@ -741,7 +797,6 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
 
     setState(prev => ({
       ...prev,
-      board: boardCopy,
       solutionSteps: steps,
       isComplete: success,
       stats: {
@@ -768,12 +823,17 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
     isUserSolved: state.isUserSolved,
     progress: state.progress,
     maxProgress: state.maxProgress,
+    isPlaying: state.isPlaying,
+    showDecisionTree: state.showDecisionTree,
     initializePuzzle,
     step,
     reset,
     solve,
     setBoardSize,
     handleCellClick,
-    getHint
+    getHint,
+    play,
+    pause,
+    toggleDecisionTree
   };
 };
