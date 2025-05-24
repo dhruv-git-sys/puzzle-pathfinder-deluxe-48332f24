@@ -15,6 +15,7 @@ import { DecisionTree } from '@/components/DecisionTree';
 import { AlgorithmStats } from '@/components/AlgorithmStats';
 import { AlgorithmExplanation } from '@/components/AlgorithmExplanation';
 import { useDFSSolver } from '@/hooks/useDFSSolver';
+import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
   const [selectedPuzzle, setSelectedPuzzle] = useState('sudoku');
@@ -24,6 +25,7 @@ const Index = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [boardSize, setBoardSize] = useState(8);
   const [mode, setMode] = useState<'solve' | 'interactive'>('solve');
+  const { toast } = useToast();
 
   const {
     board,
@@ -40,7 +42,10 @@ const Index = () => {
     setBoardSize: setSolverBoardSize,
     handleCellClick,
     userMoves,
-    isUserSolved
+    isUserSolved,
+    progress,
+    maxProgress,
+    getHint
   } = useDFSSolver(selectedPuzzle, difficulty, boardSize);
 
   const intervalRef = useRef<NodeJS.Timeout>();
@@ -53,8 +58,16 @@ const Index = () => {
         clearInterval(intervalRef.current);
       }
       setIsPlaying(false);
+      toast({
+        title: "Paused",
+        description: "Algorithm execution paused",
+      });
     } else {
       setIsPlaying(true);
+      toast({
+        title: "Playing",
+        description: "Algorithm execution started",
+      });
       intervalRef.current = setInterval(() => {
         const hasNext = step();
         if (!hasNext) {
@@ -62,10 +75,14 @@ const Index = () => {
           if (intervalRef.current) {
             clearInterval(intervalRef.current);
           }
+          toast({
+            title: "Completed",
+            description: "Algorithm execution finished",
+          });
         }
       }, speed);
     }
-  }, [isPlaying, speed, step, mode]);
+  }, [isPlaying, speed, step, mode, toast]);
 
   const handleReset = useCallback(() => {
     if (intervalRef.current) {
@@ -74,7 +91,11 @@ const Index = () => {
     setIsPlaying(false);
     setCurrentStep(0);
     reset();
-  }, [reset]);
+    toast({
+      title: "Reset",
+      description: "Puzzle has been reset",
+    });
+  }, [reset, toast]);
 
   const handleSolveInstant = useCallback(() => {
     if (mode === 'interactive') return;
@@ -84,7 +105,29 @@ const Index = () => {
     }
     setIsPlaying(false);
     solve();
-  }, [solve, mode]);
+    toast({
+      title: "Solution Found",
+      description: "Puzzle solved instantly!",
+    });
+  }, [solve, mode, toast]);
+
+  const handleGetHint = useCallback(() => {
+    if (mode !== 'interactive') return;
+    
+    const hint = getHint();
+    if (hint) {
+      toast({
+        title: "Hint",
+        description: `Try placing ${hint.value} at position (${hint.row + 1}, ${hint.col + 1})`,
+      });
+    } else {
+      toast({
+        title: "No Hint Available",
+        description: "Unable to generate a hint at this time",
+        variant: "destructive"
+      });
+    }
+  }, [mode, getHint, toast]);
 
   const handleBoardSizeChange = (newSize: number) => {
     setBoardSize(newSize);
@@ -251,7 +294,7 @@ const Index = () => {
                   </Button>
                 </>
               ) : (
-                <Button onClick={handleSolveInstant} className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700">
+                <Button onClick={handleGetHint} className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700">
                   <Lightbulb className="w-4 h-4 mr-2" />
                   Get Hint
                 </Button>
@@ -315,20 +358,32 @@ const Index = () => {
               {renderPuzzleBoard()}
             </Card>
 
-            {mode === 'solve' && (
-              <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700 p-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Progress</span>
-                    <span>{Math.round((stats.statesExplored / Math.max(stats.totalStates, 1)) * 100)}%</span>
-                  </div>
-                  <Progress 
-                    value={(stats.statesExplored / Math.max(stats.totalStates, 1)) * 100} 
-                    className="h-2"
-                  />
+            {/* Progress Bar */}
+            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700 p-4">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>{mode === 'solve' ? 'Algorithm Progress' : 'Solving Progress'}</span>
+                  <span>
+                    {mode === 'solve' 
+                      ? `${Math.round((stats.statesExplored / Math.max(stats.totalStates, 1)) * 100)}%`
+                      : `${Math.round(progress)}%`
+                    }
+                  </span>
                 </div>
-              </Card>
-            )}
+                <Progress 
+                  value={mode === 'solve' 
+                    ? (stats.statesExplored / Math.max(stats.totalStates, 1)) * 100
+                    : progress
+                  } 
+                  className="h-2"
+                />
+                {mode === 'interactive' && maxProgress > progress && (
+                  <div className="text-xs text-slate-400">
+                    Best: {Math.round(maxProgress)}%
+                  </div>
+                )}
+              </div>
+            </Card>
           </div>
 
           {/* Side Panel */}
