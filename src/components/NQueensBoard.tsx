@@ -8,13 +8,18 @@ interface NQueensBoardProps {
   currentState: any;
   violations: Set<string>;
   isAnimating: boolean;
+  onCellClick?: (row: number, col: number) => void;
+  userMoves?: number;
+  isInteractive?: boolean;
 }
 
 export const NQueensBoard: React.FC<NQueensBoardProps> = ({
   board,
   currentState,
   violations,
-  isAnimating
+  isAnimating,
+  onCellClick,
+  isInteractive = false
 }) => {
   const size = board.length;
 
@@ -35,9 +40,12 @@ export const NQueensBoard: React.FC<NQueensBoardProps> = ({
             "bg-slate-300": !isEvenSquare && !isCurrent && !isViolation,
             "bg-gradient-to-br from-blue-500 to-cyan-500 animate-pulse": isCurrent && isAnimating,
             "bg-gradient-to-br from-red-500 to-pink-500": isViolation,
-            "scale-110 shadow-lg": (isCurrent && isAnimating) || hasQueen
+            "scale-110 shadow-lg": (isCurrent && isAnimating) || hasQueen,
+            "cursor-pointer hover:bg-slate-400": isInteractive,
+            "ring-2 ring-blue-400 ring-opacity-50": isInteractive && !hasQueen
           }
         )}
+        onClick={() => onCellClick && onCellClick(row, col)}
       >
         {hasQueen && (
           <Crown 
