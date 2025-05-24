@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { Horse } from 'lucide-react';
+import { Zap } from 'lucide-react';
 
 interface KnightsTourBoardProps {
   board: number[][];
@@ -80,7 +80,7 @@ export const KnightsTourBoard: React.FC<KnightsTourBoardProps> = ({
         onClick={() => onCellClick && onCellClick(row, col)}
       >
         {hasKnight && (
-          <Horse 
+          <Zap 
             className={cn(
               "w-4 h-4 md:w-6 md:h-6 transition-all duration-300",
               {

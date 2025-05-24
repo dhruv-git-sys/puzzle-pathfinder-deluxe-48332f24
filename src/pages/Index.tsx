@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -342,7 +341,7 @@ const Index = () => {
               </TabsList>
               
               <TabsContent value="stats" className="mt-4">
-                <AlgorithmStats stats={stats} mode={mode} userMoves={userMoves} />
+                <AlgorithmStats stats={stats} />
               </TabsContent>
               
               <TabsContent value="tree" className="mt-4">
@@ -350,7 +349,7 @@ const Index = () => {
               </TabsContent>
               
               <TabsContent value="learn" className="mt-4">
-                <AlgorithmExplanation currentStep={currentState} puzzleType={selectedPuzzle} />
+                <AlgorithmExplanation currentStep={currentState} />
               </TabsContent>
             </Tabs>
           </div>
