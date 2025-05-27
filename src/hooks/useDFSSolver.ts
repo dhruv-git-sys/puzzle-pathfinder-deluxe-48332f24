@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef } from 'react';
 import { SolverState, TreeNode } from '../types/solver';
 import { 
@@ -101,14 +100,22 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
           newBoard[row][col] = 0;
         }
         
-        // Add move to history
-        moveHistory.push({
-          row,
-          col,
-          value: newBoard[row][col],
-          action: newBoard[row][col] === 0 ? 'remove' : 'place',
-          isValid: newBoard[row][col] === 0 || isValidSudoku(newBoard, row, col, newBoard[row][col])
-        });
+        // Add move to history - store move data in state property
+        const moveNode: TreeNode = {
+          id: `user-${row}-${col}-${moveHistory.length}`,
+          state: {
+            row,
+            col,
+            value: newBoard[row][col],
+            action: newBoard[row][col] === 0 ? 'remove' : 'place'
+          },
+          children: [],
+          isValid: newBoard[row][col] === 0 || isValidSudoku(newBoard, row, col, newBoard[row][col]),
+          isCurrent: true,
+          isBacktrack: false,
+          depth: moveHistory.length
+        };
+        moveHistory.push(moveNode);
         
         if (oldValue === 0 && newBoard[row][col] !== 0) {
           progressChange = 1;
@@ -141,14 +148,22 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
           progressChange = -1;
         }
         
-        // Add move to history
-        moveHistory.push({
-          row,
-          col,
-          value: newBoard[row][col],
-          action: newBoard[row][col] === 1 ? 'place' : 'remove',
-          isValid: newBoard[row][col] === 0 || isValidNQueens(newBoard, row, col)
-        });
+        // Add move to history - store move data in state property
+        const moveNode: TreeNode = {
+          id: `user-${row}-${col}-${moveHistory.length}`,
+          state: {
+            row,
+            col,
+            value: newBoard[row][col],
+            action: newBoard[row][col] === 1 ? 'place' : 'remove'
+          },
+          children: [],
+          isValid: newBoard[row][col] === 0 || isValidNQueens(newBoard, row, col),
+          isCurrent: true,
+          isBacktrack: false,
+          depth: moveHistory.length
+        };
+        moveHistory.push(moveNode);
         
         newUserMoves++;
 
@@ -178,20 +193,28 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
           newBoard[row][col] = newUserMoves;
           progressChange = 1;
           
-          // Add move to history
-          moveHistory.push({
-            row,
-            col,
-            value: newUserMoves,
-            action: 'move',
-            isValid: true
-          });
+          // Add move to history - store move data in state property
+          const moveNode: TreeNode = {
+            id: `user-${row}-${col}-${moveHistory.length}`,
+            state: {
+              row,
+              col,
+              value: newUserMoves,
+              action: 'move'
+            },
+            children: [],
+            isValid: true,
+            isCurrent: true,
+            isBacktrack: false,
+            depth: moveHistory.length
+          };
+          moveHistory.push(moveNode);
         }
       }
 
       // Update user decision tree
       userDecisionTree.current = moveHistory;
-      const newDecisionTree = buildUserDecisionTree(moveHistory);
+      const newDecisionTree = buildUserDecisionTree(moveHistory.map(node => node.state));
 
       const newProgress = calculateProgress(newBoard, puzzleType);
       const maxProgress = Math.max(prevState.maxProgress, newProgress);
@@ -339,7 +362,7 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
           newDecisionTree = buildDecisionTree(solutionSteps.current.slice(0, stepIndex.current));
         } else if (userDecisionTree.current.length > 0) {
           // User move tree
-          newDecisionTree = buildUserDecisionTree(userDecisionTree.current);
+          newDecisionTree = buildUserDecisionTree(userDecisionTree.current.map(node => node.state));
         }
       }
       
