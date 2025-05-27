@@ -49,6 +49,7 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
   const startTime = useRef(0);
   const solutionSteps = useRef<any[]>([]);
   const solutionBoard = useRef<number[][]>([]);
+  const initialBoard = useRef<number[][]>([]);
   const userDecisionTree = useRef<TreeNode[]>([]);
   const playInterval = useRef<NodeJS.Timeout | null>(null);
 
@@ -253,6 +254,8 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
       newBoard = generateKnightsTourPuzzle(boardSize);
     }
 
+    // Store initial board for resetting
+    initialBoard.current = newBoard.map(row => [...row]);
     const initialProgress = calculateProgress(newBoard, puzzleType);
 
     setState(prev => ({
@@ -287,44 +290,53 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
 
   const step = useCallback((): boolean => {
     if (stepIndex.current >= solutionSteps.current.length) {
+      setState(prev => ({ ...prev, isPlaying: false, isComplete: true }));
       return false;
     }
 
     const currentStep = solutionSteps.current[stepIndex.current];
-    const violations = new Set<string>();
+    console.log('Applying step:', stepIndex.current, currentStep);
 
-    if (!currentStep.isValid) {
-      violations.add(`${currentStep.row}-${currentStep.col}`);
-    }
+    setState(prevState => {
+      const newBoard = prevState.board.map(row => [...row]);
+      const violations = new Set<string>();
 
-    // Update board for visualization
-    const newBoard = state.board.map(row => [...row]);
-    if (currentStep.action === 'place' && currentStep.value !== undefined) {
-      newBoard[currentStep.row][currentStep.col] = currentStep.value;
-    } else if (currentStep.action === 'backtrack') {
-      newBoard[currentStep.row][currentStep.col] = 0;
-    }
-
-    const decisionTree = state.showDecisionTree ? buildDecisionTree(solutionSteps.current.slice(0, stepIndex.current + 1)) : [];
-
-    setState(prev => ({
-      ...prev,
-      board: newBoard,
-      currentState: currentStep,
-      violations,
-      decisionTree,
-      stats: {
-        ...prev.stats,
-        statesExplored: stepIndex.current + 1,
-        backtrackCount: prev.stats.backtrackCount + (currentStep.isBacktracking ? 1 : 0),
-        timeElapsed: Date.now() - startTime.current,
-        recursionDepth: Math.max(prev.stats.recursionDepth, currentStep.row || 0)
+      // Apply the step to the board
+      if (currentStep.action === 'place' && currentStep.value !== undefined) {
+        newBoard[currentStep.row][currentStep.col] = currentStep.value;
+      } else if (currentStep.action === 'backtrack') {
+        newBoard[currentStep.row][currentStep.col] = 0;
       }
-    }));
+
+      // Check for violations
+      if (!currentStep.isValid) {
+        violations.add(`${currentStep.row}-${currentStep.col}`);
+      }
+
+      const decisionTree = prevState.showDecisionTree ? 
+        buildDecisionTree(solutionSteps.current.slice(0, stepIndex.current + 1)) : [];
+
+      const newStats = {
+        ...prevState.stats,
+        statesExplored: stepIndex.current + 1,
+        backtrackCount: prevState.stats.backtrackCount + (currentStep.isBacktracking ? 1 : 0),
+        timeElapsed: Date.now() - startTime.current,
+        recursionDepth: Math.max(prevState.stats.recursionDepth, currentStep.row || 0)
+      };
+
+      return {
+        ...prevState,
+        board: newBoard,
+        currentState: currentStep,
+        violations,
+        decisionTree,
+        stats: newStats
+      };
+    });
 
     stepIndex.current++;
     return stepIndex.current < solutionSteps.current.length;
-  }, [state.board, state.showDecisionTree]);
+  }, []);
 
   const play = useCallback(() => {
     if (playInterval.current) return;
@@ -334,7 +346,7 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
     playInterval.current = setInterval(() => {
       const hasMoreSteps = step();
       if (!hasMoreSteps) {
-        setState(prev => ({ ...prev, isPlaying: false }));
+        setState(prev => ({ ...prev, isPlaying: false, isComplete: true }));
         if (playInterval.current) {
           clearInterval(playInterval.current);
           playInterval.current = null;
@@ -376,13 +388,43 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
 
   const reset = useCallback(() => {
     pause();
-    initializePuzzle();
-  }, [initializePuzzle, pause]);
+    
+    // Reset to initial board state
+    setState(prev => ({
+      ...prev,
+      board: initialBoard.current.map(row => [...row]),
+      solutionSteps: [],
+      currentState: null,
+      stats: {
+        statesExplored: 0,
+        totalStates: 0,
+        backtrackCount: 0,
+        solutionsFound: 0,
+        timeElapsed: 0,
+        recursionDepth: 0
+      },
+      isComplete: false,
+      violations: new Set(),
+      decisionTree: [],
+      userMoves: puzzleType === 'knights' ? 1 : 0,
+      isUserSolved: false,
+      progress: calculateProgress(initialBoard.current, puzzleType),
+      maxProgress: calculateProgress(initialBoard.current, puzzleType),
+      isPlaying: false
+    }));
+
+    stepIndex.current = 0;
+    solutionSteps.current = [];
+    solutionBoard.current = [];
+    userDecisionTree.current = [];
+    startTime.current = Date.now();
+  }, [pause, puzzleType]);
 
   const solve = useCallback(() => {
     console.log('Starting solve for:', puzzleType);
     const boardCopy = state.board.map(row => [...row]);
     const steps: any[] = [];
+    startTime.current = Date.now();
 
     let success = false;
     if (puzzleType === 'sudoku') {
@@ -395,18 +437,24 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
 
     solutionSteps.current = steps;
     solutionBoard.current = boardCopy;
-    console.log('Generated steps:', steps.length);
+    console.log('Generated steps:', steps.length, 'Success:', success);
 
+    // For instant solve, apply the final solution immediately
     setState(prev => ({
       ...prev,
+      board: success ? boardCopy : prev.board,
       solutionSteps: steps,
       isComplete: success,
       stats: {
         ...prev.stats,
         totalStates: steps.length,
-        solutionsFound: success ? 1 : 0
+        solutionsFound: success ? 1 : 0,
+        timeElapsed: Date.now() - startTime.current
       }
     }));
+
+    // Reset step index for play functionality
+    stepIndex.current = 0;
   }, [state.board, puzzleType]);
 
   const setBoardSize = useCallback((newSize: number) => {
