@@ -88,17 +88,36 @@ export const solveKnightsTourDFS = (board: number[][], move: number, steps: any[
     [1, -2], [1, 2], [2, -1], [2, 1]
   ];
 
+  // Find current knight position
   let currentRow = -1, currentCol = -1;
-  for (let row = 0; row < size; row++) {
-    for (let col = 0; col < size; col++) {
-      if (board[row][col] === move - 1) {
-        currentRow = row;
-        currentCol = col;
-        break;
+  
+  // For the first move, start from position with value 1
+  if (move === 2) {
+    for (let row = 0; row < size; row++) {
+      for (let col = 0; col < size; col++) {
+        if (board[row][col] === 1) {
+          currentRow = row;
+          currentCol = col;
+          break;
+        }
       }
+      if (currentRow !== -1) break;
     }
-    if (currentRow !== -1) break;
+  } else {
+    // Find the position with the current move number - 1
+    for (let row = 0; row < size; row++) {
+      for (let col = 0; col < size; col++) {
+        if (board[row][col] === move - 1) {
+          currentRow = row;
+          currentCol = col;
+          break;
+        }
+      }
+      if (currentRow !== -1) break;
+    }
   }
+
+  if (currentRow === -1 || currentCol === -1) return false;
 
   for (const [dr, dc] of knightMoves) {
     const newRow = currentRow + dr;
@@ -108,6 +127,7 @@ export const solveKnightsTourDFS = (board: number[][], move: number, steps: any[
       steps.push({
         row: newRow,
         col: newCol,
+        value: move,
         action: 'try',
         isValid: true
       });
@@ -116,6 +136,7 @@ export const solveKnightsTourDFS = (board: number[][], move: number, steps: any[
       steps.push({
         row: newRow,
         col: newCol,
+        value: move,
         action: 'place',
         isValid: true
       });
@@ -126,6 +147,7 @@ export const solveKnightsTourDFS = (board: number[][], move: number, steps: any[
       steps.push({
         row: newRow,
         col: newCol,
+        value: 0,
         action: 'backtrack',
         isBacktracking: true
       });

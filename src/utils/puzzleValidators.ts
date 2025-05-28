@@ -79,21 +79,23 @@ export const checkKnightsTourSolved = (board: number[][]): boolean => {
   const size = board.length;
   const totalCells = size * size;
   
-  for (let i = 1; i <= totalCells; i++) {
-    let found = false;
-    for (let row = 0; row < size; row++) {
-      for (let col = 0; col < size; col++) {
-        if (board[row][col] === i) {
-          found = true;
-          break;
+  // Check if all numbers from 1 to totalCells are present
+  const numbersFound = new Set<number>();
+  
+  for (let row = 0; row < size; row++) {
+    for (let col = 0; col < size; col++) {
+      const value = board[row][col];
+      if (value > 0 && value <= totalCells) {
+        if (numbersFound.has(value)) {
+          return false; // Duplicate number found
         }
+        numbersFound.add(value);
       }
-      if (found) break;
     }
-    if (!found) return false;
   }
   
-  return true;
+  // Check if we have all numbers from 1 to totalCells
+  return numbersFound.size === totalCells;
 };
 
 export const calculateProgress = (board: number[][], puzzleType: string): number => {

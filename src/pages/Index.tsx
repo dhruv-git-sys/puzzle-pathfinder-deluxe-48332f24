@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +7,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Play, Pause, RotateCcw, Zap, Brain, Target, User, Lightbulb } from 'lucide-react';
 import { SudokuBoard } from '@/components/SudokuBoard';
 import { NQueensBoard } from '@/components/NQueensBoard';
@@ -356,33 +356,6 @@ const Index = () => {
                 </div>
               </div>
               {renderPuzzleBoard()}
-            </Card>
-
-            {/* Progress Bar */}
-            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700 p-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>{mode === 'solve' ? 'Algorithm Progress' : 'Solving Progress'}</span>
-                  <span>
-                    {mode === 'solve' 
-                      ? `${Math.round((stats.statesExplored / Math.max(stats.totalStates, 1)) * 100)}%`
-                      : `${Math.round(progress)}%`
-                    }
-                  </span>
-                </div>
-                <Progress 
-                  value={mode === 'solve' 
-                    ? (stats.statesExplored / Math.max(stats.totalStates, 1)) * 100
-                    : progress
-                  } 
-                  className="h-2"
-                />
-                {mode === 'interactive' && maxProgress > progress && (
-                  <div className="text-xs text-slate-400">
-                    Best: {Math.round(maxProgress)}%
-                  </div>
-                )}
-              </div>
             </Card>
           </div>
 
