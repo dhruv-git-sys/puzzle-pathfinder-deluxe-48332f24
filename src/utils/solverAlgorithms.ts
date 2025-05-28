@@ -53,7 +53,8 @@ export const solveNQueensDFS = (board: number[][], row: number, steps: any[]): b
       row,
       col,
       action: 'try',
-      isValid: isValidNQueens(board, row, col)
+      isValid: isValidNQueens(board, row, col),
+      depth: row
     });
 
     if (isValidNQueens(board, row, col)) {
@@ -62,20 +63,46 @@ export const solveNQueensDFS = (board: number[][], row: number, steps: any[]): b
         row,
         col,
         action: 'place',
-        isValid: true
+        isValid: true,
+        depth: row
       });
 
       if (solveNQueensDFS(board, row + 1, steps)) return true;
 
+      // Backtrack: remove the queen
       board[row][col] = 0;
       steps.push({
         row,
         col,
         action: 'backtrack',
-        isBacktracking: true
+        isBacktracking: true,
+        depth: row,
+        backtrackFrom: row + 1
+      });
+    } else {
+      // Mark as invalid attempt
+      steps.push({
+        row,
+        col,
+        action: 'reject',
+        isValid: false,
+        depth: row
       });
     }
   }
+  
+  // If we've tried all columns in this row and none worked, we need to backtrack
+  if (row > 0) {
+    steps.push({
+      row: row - 1,
+      col: -1,
+      action: 'backtrack_row',
+      isBacktracking: true,
+      depth: row - 1,
+      backtrackFrom: row
+    });
+  }
+  
   return false;
 };
 
