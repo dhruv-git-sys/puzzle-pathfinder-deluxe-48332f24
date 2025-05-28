@@ -36,43 +36,88 @@ export const buildUserDecisionTree = (moves: any[]): TreeNode[] => {
   return tree;
 };
 
-export const buildDecisionTree = (steps: any[]): TreeNode[] => {
+export const buildRecursionTree = (steps: any[]): TreeNode[] => {
   const tree: TreeNode[] = [];
   const nodeMap = new Map<string, TreeNode>();
+  const depthStack: TreeNode[] = []; // Track nodes at each depth level
   
   steps.forEach((step, index) => {
-    const nodeId = `${step.row}-${step.col}-${index}`;
+    const nodeId = `${step.row}-${step.col}-${step.depth || 0}-${index}`;
     const node: TreeNode = {
       id: nodeId,
-      state: step,
+      state: {
+        ...step,
+        stepIndex: index
+      },
       children: [],
-      isValid: step.isValid || false,
+      isValid: step.isValid || step.action === 'place',
       isCurrent: false,
-      isBacktrack: step.isBacktracking || false,
-      depth: step.row || 0
+      isBacktrack: step.isBacktracking || step.action === 'backtrack' || step.action === 'backtrack_row',
+      depth: step.depth || step.row || 0
     };
     
     nodeMap.set(nodeId, node);
     
-    if (index === 0 || step.isBacktracking) {
-      tree.push(node);
-    } else {
-      // Find parent based on depth/backtracking
-      let parentIndex = index - 1;
-      while (parentIndex >= 0 && steps[parentIndex].isBacktracking) {
-        parentIndex--;
+    // Handle tree structure based on depth and action
+    if (step.action === 'try' || step.action === 'place') {
+      const currentDepth = node.depth;
+      
+      // Trim stack to current depth
+      while (depthStack.length > currentDepth) {
+        depthStack.pop();
       }
-      if (parentIndex >= 0) {
-        const parentId = `${steps[parentIndex].row}-${steps[parentIndex].col}-${parentIndex}`;
-        const parent = nodeMap.get(parentId);
-        if (parent) {
-          parent.children.push(node);
-        } else {
-          tree.push(node);
-        }
+      
+      // Find parent at the previous depth
+      if (depthStack.length > 0) {
+        const parent = depthStack[depthStack.length - 1];
+        parent.children.push(node);
+      } else {
+        tree.push(node);
+      }
+      
+      // If this is a successful placement, add to stack for potential children
+      if (step.action === 'place') {
+        depthStack[currentDepth] = node;
+      }
+    } else if (step.action === 'reject') {
+      // Rejected attempts are siblings of successful placements at the same depth
+      const currentDepth = node.depth;
+      
+      // Trim stack to current depth
+      while (depthStack.length > currentDepth + 1) {
+        depthStack.pop();
+      }
+      
+      if (depthStack.length > 0) {
+        const parent = depthStack[depthStack.length - 1];
+        parent.children.push(node);
+      } else {
+        tree.push(node);
+      }
+    } else if (step.action === 'backtrack' || step.action === 'backtrack_row') {
+      // Backtrack nodes show the retreat
+      const currentDepth = node.depth;
+      
+      // Trim stack beyond current depth
+      while (depthStack.length > currentDepth + 1) {
+        depthStack.pop();
+      }
+      
+      if (depthStack.length > 0) {
+        const parent = depthStack[depthStack.length - 1];
+        parent.children.push(node);
+      } else {
+        tree.push(node);
+      }
+      
+      // Remove nodes from stack as we backtrack
+      if (depthStack.length > currentDepth) {
+        depthStack.splice(currentDepth);
       }
     }
   });
   
   return tree;
 };
+
+export const buildDecisionTree = buildRecursionTree;

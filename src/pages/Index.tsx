@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Play, Pause, RotateCcw, Zap, Brain, Target, User, Lightbulb } from 'lucide-react';
+import { Play, Pause, RotateCcw, Zap, Brain, Target, User, Lightbulb, GitBranch } from 'lucide-react';
 import { SudokuBoard } from '@/components/SudokuBoard';
 import { NQueensBoard } from '@/components/NQueensBoard';
 import { KnightsTourBoard } from '@/components/KnightsTourBoard';
@@ -45,7 +45,9 @@ const Index = () => {
     isUserSolved,
     progress,
     maxProgress,
-    getHint
+    getHint,
+    showDecisionTree,
+    toggleDecisionTree
   } = useDFSSolver(selectedPuzzle, difficulty, boardSize);
 
   const intervalRef = useRef<NodeJS.Timeout>();
@@ -302,6 +304,13 @@ const Index = () => {
               <Button onClick={handleReset} variant="outline" className="border-slate-600">
                 <RotateCcw className="w-4 h-4" />
               </Button>
+              <Button
+                onClick={toggleDecisionTree}
+                variant="outline"
+                className={`border-slate-600 ${showDecisionTree ? 'bg-purple-600/20 border-purple-400' : ''}`}
+              >
+                <GitBranch className="w-4 h-4" />
+              </Button>
             </div>
           </div>
 
@@ -361,10 +370,10 @@ const Index = () => {
 
           {/* Side Panel */}
           <div className="space-y-6">
-            <Tabs defaultValue="stats" className="w-full">
+            <Tabs defaultValue={showDecisionTree ? "tree" : "stats"} className="w-full">
               <TabsList className="grid w-full grid-cols-3 bg-slate-800">
                 <TabsTrigger value="stats">Stats</TabsTrigger>
-                <TabsTrigger value="tree">Tree</TabsTrigger>
+                <TabsTrigger value="tree">Recursion Tree</TabsTrigger>
                 <TabsTrigger value="learn">Learn</TabsTrigger>
               </TabsList>
               

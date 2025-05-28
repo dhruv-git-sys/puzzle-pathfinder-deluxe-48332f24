@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useRef } from 'react';
 import { SolverState, TreeNode } from '../types/solver';
 import { 
@@ -19,7 +20,7 @@ import {
   solveNQueensDFS, 
   solveKnightsTourDFS 
 } from '../utils/solverAlgorithms';
-import { buildUserDecisionTree, buildDecisionTree } from '../utils/decisionTreeUtils';
+import { buildUserDecisionTree, buildRecursionTree } from '../utils/decisionTreeUtils';
 
 export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: number = 8) => {
   const [state, setState] = useState<SolverState>({
@@ -108,7 +109,8 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
             row,
             col,
             value: newBoard[row][col],
-            action: newBoard[row][col] === 0 ? 'remove' : 'place'
+            action: newBoard[row][col] === 0 ? 'remove' : 'place',
+            stepIndex: moveHistory.length
           },
           children: [],
           isValid: newBoard[row][col] === 0 || isValidSudoku(newBoard, row, col, newBoard[row][col]),
@@ -156,7 +158,8 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
             row,
             col,
             value: newBoard[row][col],
-            action: newBoard[row][col] === 1 ? 'place' : 'remove'
+            action: newBoard[row][col] === 1 ? 'place' : 'remove',
+            stepIndex: moveHistory.length
           },
           children: [],
           isValid: newBoard[row][col] === 0 || isValidNQueens(newBoard, row, col),
@@ -201,7 +204,8 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
               row,
               col,
               value: newUserMoves,
-              action: 'move'
+              action: 'move',
+              stepIndex: moveHistory.length
             },
             children: [],
             isValid: true,
@@ -313,8 +317,11 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
         violations.add(`${currentStep.row}-${currentStep.col}`);
       }
 
+      // Add step index to current step for tree building
+      const stepWithIndex = { ...currentStep, stepIndex: stepIndex.current };
+
       const decisionTree = prevState.showDecisionTree ? 
-        buildDecisionTree(solutionSteps.current.slice(0, stepIndex.current + 1)) : [];
+        buildRecursionTree(solutionSteps.current.slice(0, stepIndex.current + 1).map((step, idx) => ({ ...step, stepIndex: idx }))) : [];
 
       const newStats = {
         ...prevState.stats,
@@ -327,7 +334,7 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
       return {
         ...prevState,
         board: newBoard,
-        currentState: currentStep,
+        currentState: stepWithIndex,
         violations,
         decisionTree,
         stats: newStats
@@ -371,7 +378,7 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
       if (newShowDecisionTree) {
         if (solutionSteps.current.length > 0) {
           // Auto-solve tree
-          newDecisionTree = buildDecisionTree(solutionSteps.current.slice(0, stepIndex.current));
+          newDecisionTree = buildRecursionTree(solutionSteps.current.slice(0, stepIndex.current).map((step, idx) => ({ ...step, stepIndex: idx })));
         } else if (userDecisionTree.current.length > 0) {
           // User move tree
           newDecisionTree = buildUserDecisionTree(userDecisionTree.current.map(node => node.state));
