@@ -1,73 +1,57 @@
-# Welcome to your Lovable project
+# 🎯 DFS Backtracking Visualizer
 
-## Project info
+> **Submitted by**: Dhruv Agrawal  
+> **USN**: 4NI23CS053  
+> **Institution**: The National Institute of Engineering, Mysuru  
+> **Department**: Computer Science and Engineering (CSE)  
+> **Semester**: 4th Semester  
+> **Subject**: Discrete Mathematical Structures  
+> **Project URL**: [Lovable Project Dashboard](https://lovable.dev/projects/fb59c5de-97c6-43e0-9663-c2b933a165c0)  
+>  
+> 📽️ **Demo Video**: [Watch on YouTube](https://www.youtube.com/watch?v=YOUR_VIDEO_ID)  
 
-**URL**: https://lovable.dev/projects/fb59c5de-97c6-43e0-9663-c2b933a165c0
+---
 
-## How can I edit this code?
+## 📌 Project Overview
 
-There are several ways of editing your application.
+This project is an interactive **DFS (Depth-First Search) Backtracking Visualizer**, designed to help learners and enthusiasts understand the recursive nature of backtracking algorithms. It enables users to build custom grids, visualize recursive depth-first search, and grasp how backtracking undoes failed paths.
 
-**Use Lovable**
+This visualizer brings to life fundamental concepts from **Discrete Mathematical Structures**, including graph theory, recursion trees, and search algorithms.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/fb59c5de-97c6-43e0-9663-c2b933a165c0) and start prompting.
+---
 
-Changes made via Lovable will be committed automatically to this repo.
+## ✨ Features
 
-**Use your preferred IDE**
+- 🔧 Build custom 2D grid environments
+- 🚶‍♂️ Visualize DFS traversal with real-time animations
+- 🔁 See backtracking in action with color-coded paths
+- 🧠 View recursion depth and active stack paths
+- ⏱️ Adjustable animation speed
+- 📊 Intuitive UI using React + Tailwind + shadcn-ui
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+---
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## 🛠️ Technologies Used
 
-Follow these steps:
+- [Vite](https://vitejs.dev/)
+- [React](https://reactjs.org/)
+- [TypeScript](https://www.typescriptlang.org/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [shadcn/ui](https://ui.shadcn.dev/)
+- [Lovable.dev](https://lovable.dev)
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+---
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+## 🚀 Getting Started
 
-# Step 3: Install the necessary dependencies.
-npm i
+### ✅ Prerequisites
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+Make sure you have the following installed:
 
-**Edit a file directly in GitHub**
+- [Node.js & npm](https://nodejs.org/) (recommended to install via [nvm](https://github.com/nvm-sh/nvm#installing-and-updating))
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### 📥 Installation Steps
 
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/fb59c5de-97c6-43e0-9663-c2b933a165c0) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+1. **Clone the repository:**
+   ```bash
+   git clone <YOUR_GIT_URL>
