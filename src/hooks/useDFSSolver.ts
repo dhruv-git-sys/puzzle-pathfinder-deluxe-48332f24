@@ -20,6 +20,7 @@ import {
   solveKnightsTourDFS 
 } from '../utils/solverAlgorithms';
 import { buildUserDecisionTree, buildRecursionTree, buildProgressTree } from '../utils/decisionTreeUtils';
+import { generateHint } from '../utils/hintSystem';
 
 export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: number = 8) => {
   const [state, setState] = useState<SolverState>({
@@ -54,33 +55,10 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
   const playInterval = useRef<NodeJS.Timeout | null>(null);
 
   const getHint = useCallback(() => {
-    if (solutionBoard.current.length === 0) {
-      const boardCopy = state.board.map(row => [...row]);
-      const steps: any[] = [];
-
-      if (puzzleType === 'sudoku') {
-        solveSudokuDFS(boardCopy, steps);
-      } else if (puzzleType === 'nqueens') {
-        solveNQueensDFS(boardCopy, 0, steps);
-      } else if (puzzleType === 'knights') {
-        solveKnightsTourDFS(boardCopy, 2, steps);
-      }
-      
-      solutionBoard.current = boardCopy;
-    }
-
-    // Find next valid move
-    if (puzzleType === 'sudoku') {
-      for (let row = 0; row < 9; row++) {
-        for (let col = 0; col < 9; col++) {
-          if (state.board[row][col] === 0 && solutionBoard.current[row][col] !== 0) {
-            return { row, col, value: solutionBoard.current[row][col] };
-          }
-        }
-      }
-    }
-
-    return null;
+    console.log('Getting hint for puzzle type:', puzzleType);
+    const hint = generateHint(state.board, puzzleType);
+    console.log('Generated hint:', hint);
+    return hint;
   }, [state.board, puzzleType]);
 
   const handleCellClick = useCallback((row: number, col: number) => {
@@ -88,7 +66,6 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
       const newBoard = prevState.board.map(r => [...r]);
       let newUserMoves = prevState.userMoves;
       let newViolations = new Set<string>();
-      let progressChange = 0;
       let moveHistory = [...(userDecisionTree.current || [])];
 
       if (puzzleType === 'sudoku') {
@@ -101,7 +78,6 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
           newBoard[row][col] = 0;
         }
         
-        // Add move to history - store move data in state property
         const moveNode: TreeNode = {
           id: `user-${row}-${col}-${moveHistory.length}`,
           state: {
@@ -118,15 +94,9 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
           depth: moveHistory.length
         };
         moveHistory.push(moveNode);
-        
-        if (oldValue === 0 && newBoard[row][col] !== 0) {
-          progressChange = 1;
-        } else if (oldValue !== 0 && newBoard[row][col] === 0) {
-          progressChange = -1;
-        }
-        
         newUserMoves++;
 
+        // Check for violations
         for (let r = 0; r < 9; r++) {
           for (let c = 0; c < 9; c++) {
             if (newBoard[r][c] !== 0) {
@@ -134,23 +104,18 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
               newBoard[r][c] = 0;
               if (!isValidSudoku(newBoard, r, c, num)) {
                 newViolations.add(`${r}-${c}`);
-                progressChange -= 0.5;
               }
               newBoard[r][c] = num;
             }
           }
         }
       } else if (puzzleType === 'nqueens') {
-        const oldValue = newBoard[row][col];
         if (newBoard[row][col] === 0) {
           newBoard[row][col] = 1;
-          progressChange = 1;
         } else {
           newBoard[row][col] = 0;
-          progressChange = -1;
         }
         
-        // Add move to history - store move data in state property
         const moveNode: TreeNode = {
           id: `user-${row}-${col}-${moveHistory.length}`,
           state: {
@@ -167,14 +132,13 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
           depth: moveHistory.length
         };
         moveHistory.push(moveNode);
-        
         newUserMoves++;
 
+        // Check for violations
         for (let r = 0; r < newBoard.length; r++) {
           for (let c = 0; c < newBoard.length; c++) {
             if (newBoard[r][c] === 1 && !isValidNQueens(newBoard, r, c)) {
               newViolations.add(`${r}-${c}`);
-              progressChange -= 0.5;
             }
           }
         }
@@ -194,9 +158,7 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
         if (knightRow !== -1 && knightCol !== -1 && isValidKnightMove(knightRow, knightCol, row, col) && newBoard[row][col] === 0) {
           newUserMoves++;
           newBoard[row][col] = newUserMoves;
-          progressChange = 1;
           
-          // Add move to history - store move data in state property
           const moveNode: TreeNode = {
             id: `user-${row}-${col}-${moveHistory.length}`,
             state: {
@@ -216,7 +178,6 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
         }
       }
 
-      // Update user decision tree
       userDecisionTree.current = moveHistory;
       const newDecisionTree = buildUserDecisionTree(moveHistory.map(node => node.state));
       const newProgressTree = buildProgressTree(moveHistory.map(node => node.state));
@@ -259,7 +220,6 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
       newBoard = generateKnightsTourPuzzle(boardSize);
     }
 
-    // Store initial board for resetting
     initialBoard.current = newBoard.map(row => [...row]);
     const initialProgress = calculateProgress(newBoard, puzzleType);
 
@@ -306,19 +266,16 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
       const newBoard = prevState.board.map(row => [...row]);
       const violations = new Set<string>();
 
-      // Apply the step to the board
       if (currentStep.action === 'place' && currentStep.value !== undefined) {
         newBoard[currentStep.row][currentStep.col] = currentStep.value;
       } else if (currentStep.action === 'backtrack') {
         newBoard[currentStep.row][currentStep.col] = 0;
       }
 
-      // Check for violations
       if (!currentStep.isValid) {
         violations.add(`${currentStep.row}-${currentStep.col}`);
       }
 
-      // Add step index to current step for tree building
       const stepWithIndex = { ...currentStep, stepIndex: stepIndex.current };
 
       const decisionTree = prevState.showDecisionTree ? 
@@ -332,7 +289,7 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
         statesExplored: stepIndex.current + 1,
         backtrackCount: prevState.stats.backtrackCount + (currentStep.isBacktracking ? 1 : 0),
         timeElapsed: Date.now() - startTime.current,
-        recursionDepth: Math.max(prevState.stats.recursionDepth, currentStep.row || 0)
+        recursionDepth: Math.max(prevState.stats.recursionDepth, currentStep.depth || 0)
       };
 
       return {
@@ -383,11 +340,9 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
       
       if (newShowDecisionTree) {
         if (solutionSteps.current.length > 0) {
-          // Auto-solve tree
           newDecisionTree = buildRecursionTree(solutionSteps.current.slice(0, stepIndex.current).map((step, idx) => ({ ...step, stepIndex: idx })));
           newProgressTree = buildProgressTree(solutionSteps.current.slice(0, stepIndex.current).map((step, idx) => ({ ...step, stepIndex: idx })));
         } else if (userDecisionTree.current.length > 0) {
-          // User move tree
           newDecisionTree = buildUserDecisionTree(userDecisionTree.current.map(node => node.state));
           newProgressTree = buildProgressTree(userDecisionTree.current.map(node => node.state));
         }
@@ -456,7 +411,6 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
     solutionBoard.current = boardCopy;
     console.log('Generated steps:', steps.length, 'Success:', success);
 
-    // For instant solve, apply the final solution immediately
     setState(prev => ({
       ...prev,
       board: success ? boardCopy : prev.board,
@@ -470,7 +424,6 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
       }
     }));
 
-    // Reset step index for play functionality
     stepIndex.current = 0;
   }, [state.board, puzzleType]);
 

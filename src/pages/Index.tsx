@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,7 +21,6 @@ const Index = () => {
   const [difficulty, setDifficulty] = useState('easy');
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(500);
-  const [currentStep, setCurrentStep] = useState(0);
   const [boardSize, setBoardSize] = useState(8);
   const [mode, setMode] = useState<'solve' | 'interactive'>('solve');
   const { toast } = useToast();
@@ -92,7 +90,6 @@ const Index = () => {
       clearInterval(intervalRef.current);
     }
     setIsPlaying(false);
-    setCurrentStep(0);
     reset();
     toast({
       title: "Reset",
@@ -117,16 +114,29 @@ const Index = () => {
   const handleGetHint = useCallback(() => {
     if (mode !== 'interactive') return;
     
-    const hint = getHint();
-    if (hint) {
+    try {
+      const hint = getHint();
+      console.log('Hint received:', hint);
+      
+      if (hint) {
+        toast({
+          title: "💡 Hint",
+          description: `${hint.action === 'place' ? 'Place' : 'Move to'} ${hint.value} at position (${hint.row + 1}, ${hint.col + 1}). ${hint.reason}`,
+          duration: 5000,
+        });
+      } else {
+        toast({
+          title: "🤔 No Hint Available",
+          description: "Unable to generate a hint. Try making a move or check if the puzzle is already solved!",
+          variant: "destructive",
+          duration: 3000
+        });
+      }
+    } catch (error) {
+      console.error('Error getting hint:', error);
       toast({
-        title: "Hint",
-        description: `Try placing ${hint.value} at position (${hint.row + 1}, ${hint.col + 1})`,
-      });
-    } else {
-      toast({
-        title: "No Hint Available",
-        description: "Unable to generate a hint at this time",
+        title: "❌ Error",
+        description: "There was an error generating the hint. Please try again.",
         variant: "destructive"
       });
     }
@@ -297,7 +307,11 @@ const Index = () => {
                   </Button>
                 </>
               ) : (
-                <Button onClick={handleGetHint} className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700">
+                <Button 
+                  onClick={handleGetHint} 
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+                  disabled={isUserSolved}
+                >
                   <Lightbulb className="w-4 h-4 mr-2" />
                   Get Hint
                 </Button>
@@ -322,7 +336,7 @@ const Index = () => {
                 <span className="text-sm font-medium">Interactive Mode Instructions:</span>
               </div>
               <p className="text-sm text-slate-300">
-                {selectedPuzzle === 'sudoku' && "Click on empty cells to enter numbers (1-9). Try to solve the puzzle yourself!"}
+                {selectedPuzzle === 'sudoku' && "Click on empty cells to cycle through numbers (1-9). Try to solve the puzzle yourself!"}
                 {selectedPuzzle === 'nqueens' && "Click on cells to place or remove queens. Try to place all queens without conflicts!"}
                 {selectedPuzzle === 'knights' && "Click on cells to move the knight. Try to visit all squares exactly once!"}
               </p>
