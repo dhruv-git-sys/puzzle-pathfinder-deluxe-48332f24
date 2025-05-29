@@ -54,4 +54,17 @@ Make sure you have the following installed:
 
 1. **Clone the repository:**
    ```bash
-   git clone <YOUR_GIT_URL>
+```sh
+# Step 1: Clone the repository
+git clone <YOUR_GIT_URL>
+
+# Step 2: Navigate into the project directory
+cd <YOUR_PROJECT_NAME>
+
+# Step 3: Install all dependencies
+npm install
+
+# Step 4: Start the development server
+npm run dev
+
+# Visit http://localhost:5173 to view the application
