@@ -8,7 +8,7 @@
 > **Subject**: Discrete Mathematical Structures  
 > **Project URL**: [Lovable Project Dashboard](https://preview--puzzle-pathfinder-deluxe.lovable.app/)  
 >  
-> 📽️ **Demo Video**: [Watch on YouTube](https://www.youtube.com/watch?v=YOUR_VIDEO_ID)  
+> 📽️ **Demo Video**: [Watch on YouTube](https://youtu.be/wx4WRw3gK5s)  
 
 ---
 
