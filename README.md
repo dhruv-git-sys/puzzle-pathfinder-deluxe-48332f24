@@ -6,7 +6,7 @@
 > **Department**: Computer Science and Engineering (CSE)  
 > **Semester**: 4th Semester  
 > **Subject**: Discrete Mathematical Structures  
-> **Project URL**: [Lovable Project Dashboard](https://lovable.dev/projects/fb59c5de-97c6-43e0-9663-c2b933a165c0)  
+> **Project URL**: [Lovable Project Dashboard](https://preview--puzzle-pathfinder-deluxe.lovable.app/)  
 >  
 > 📽️ **Demo Video**: [Watch on YouTube](https://www.youtube.com/watch?v=YOUR_VIDEO_ID)  
 
