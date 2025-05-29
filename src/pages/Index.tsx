@@ -35,6 +35,7 @@ const Index = () => {
     isComplete,
     violations,
     decisionTree,
+    progressTree,
     initializePuzzle,
     step,
     reset,
@@ -386,6 +387,7 @@ const Index = () => {
                   tree={decisionTree} 
                   currentState={currentState} 
                   isInteractive={mode === 'interactive'}
+                  progressTree={progressTree}
                 />
               </TabsContent>
               

@@ -38,11 +38,13 @@ export const buildUserDecisionTree = (moves: any[]): TreeNode[] => {
 
 export const buildRecursionTree = (steps: any[]): TreeNode[] => {
   const tree: TreeNode[] = [];
-  const nodeMap = new Map<string, TreeNode>();
-  const depthStack: TreeNode[] = []; // Track nodes at each depth level
+  const nodeStack: TreeNode[] = []; // Stack to track parent nodes at each depth
+  const branchHistory: Map<string, TreeNode[]> = new Map(); // Track all attempts at each position
   
   steps.forEach((step, index) => {
-    const nodeId = `${step.row}-${step.col}-${step.depth || 0}-${index}`;
+    const nodeId = `${step.row}-${step.col}-${step.depth || 0}-${step.action}-${index}`;
+    const currentDepth = step.depth || step.row || 0;
+    
     const node: TreeNode = {
       id: nodeId,
       state: {
@@ -53,66 +55,76 @@ export const buildRecursionTree = (steps: any[]): TreeNode[] => {
       isValid: step.isValid || step.action === 'place',
       isCurrent: false,
       isBacktrack: step.isBacktracking || step.action === 'backtrack' || step.action === 'backtrack_row',
-      depth: step.depth || step.row || 0
+      depth: currentDepth
     };
     
-    nodeMap.set(nodeId, node);
-    
-    // Handle tree structure based on depth and action
-    if (step.action === 'try' || step.action === 'place') {
-      const currentDepth = node.depth;
-      
+    // Handle different types of steps
+    if (step.action === 'try') {
       // Trim stack to current depth
-      while (depthStack.length > currentDepth) {
-        depthStack.pop();
+      while (nodeStack.length > currentDepth) {
+        nodeStack.pop();
       }
       
-      // Find parent at the previous depth
-      if (depthStack.length > 0) {
-        const parent = depthStack[depthStack.length - 1];
+      // Add to appropriate parent
+      if (nodeStack.length > 0) {
+        const parent = nodeStack[nodeStack.length - 1];
         parent.children.push(node);
       } else {
         tree.push(node);
       }
       
-      // If this is a successful placement, add to stack for potential children
-      if (step.action === 'place') {
-        depthStack[currentDepth] = node;
+      // Track this attempt
+      const posKey = `${step.row}-${step.col}`;
+      if (!branchHistory.has(posKey)) {
+        branchHistory.set(posKey, []);
       }
+      branchHistory.get(posKey)!.push(node);
+      
+    } else if (step.action === 'place') {
+      // This is a successful placement - it becomes a new branch point
+      while (nodeStack.length > currentDepth) {
+        nodeStack.pop();
+      }
+      
+      if (nodeStack.length > 0) {
+        const parent = nodeStack[nodeStack.length - 1];
+        parent.children.push(node);
+      } else {
+        tree.push(node);
+      }
+      
+      // Push this node as a potential parent for next depth
+      nodeStack[currentDepth] = node;
+      
     } else if (step.action === 'reject') {
-      // Rejected attempts are siblings of successful placements at the same depth
-      const currentDepth = node.depth;
-      
-      // Trim stack to current depth
-      while (depthStack.length > currentDepth + 1) {
-        depthStack.pop();
+      // Rejected attempts are siblings of other attempts at the same position
+      while (nodeStack.length > currentDepth) {
+        nodeStack.pop();
       }
       
-      if (depthStack.length > 0) {
-        const parent = depthStack[depthStack.length - 1];
+      if (nodeStack.length > 0) {
+        const parent = nodeStack[nodeStack.length - 1];
         parent.children.push(node);
       } else {
         tree.push(node);
       }
+      
     } else if (step.action === 'backtrack' || step.action === 'backtrack_row') {
-      // Backtrack nodes show the retreat
-      const currentDepth = node.depth;
-      
-      // Trim stack beyond current depth
-      while (depthStack.length > currentDepth + 1) {
-        depthStack.pop();
+      // Backtracking removes nodes from the stack
+      while (nodeStack.length > currentDepth) {
+        nodeStack.pop();
       }
       
-      if (depthStack.length > 0) {
-        const parent = depthStack[depthStack.length - 1];
+      if (nodeStack.length > 0) {
+        const parent = nodeStack[nodeStack.length - 1];
         parent.children.push(node);
       } else {
         tree.push(node);
       }
       
-      // Remove nodes from stack as we backtrack
-      if (depthStack.length > currentDepth) {
-        depthStack.splice(currentDepth);
+      // Remove this depth level from the stack
+      if (nodeStack.length > currentDepth) {
+        nodeStack.splice(currentDepth);
       }
     }
   });
@@ -121,3 +133,45 @@ export const buildRecursionTree = (steps: any[]): TreeNode[] => {
 };
 
 export const buildDecisionTree = buildRecursionTree;
+
+// New utility to create a flattened progress tree for better visualization
+export const buildProgressTree = (steps: any[]): TreeNode[] => {
+  const progressNodes: TreeNode[] = [];
+  const pathStack: string[] = []; // Track the current solution path
+  
+  steps.forEach((step, index) => {
+    const nodeId = `progress-${step.row}-${step.col}-${index}`;
+    const currentDepth = step.depth || step.row || 0;
+    
+    const node: TreeNode = {
+      id: nodeId,
+      state: {
+        ...step,
+        stepIndex: index,
+        pathPosition: pathStack.length
+      },
+      children: [],
+      isValid: step.isValid || step.action === 'place',
+      isCurrent: index === steps.length - 1,
+      isBacktrack: step.isBacktracking || step.action === 'backtrack' || step.action === 'backtrack_row',
+      depth: currentDepth
+    };
+    
+    // Update path stack based on action
+    if (step.action === 'place') {
+      pathStack.push(`${step.row}-${step.col}`);
+      node.state.isOnSolutionPath = true;
+    } else if (step.action === 'backtrack' || step.action === 'backtrack_row') {
+      if (pathStack.length > 0) {
+        pathStack.pop();
+      }
+      node.state.isOnSolutionPath = false;
+    } else {
+      node.state.isOnSolutionPath = pathStack.length > currentDepth;
+    }
+    
+    progressNodes.push(node);
+  });
+  
+  return progressNodes;
+};

@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef } from 'react';
 import { SolverState, TreeNode } from '../types/solver';
 import { 
@@ -20,7 +19,7 @@ import {
   solveNQueensDFS, 
   solveKnightsTourDFS 
 } from '../utils/solverAlgorithms';
-import { buildUserDecisionTree, buildRecursionTree } from '../utils/decisionTreeUtils';
+import { buildUserDecisionTree, buildRecursionTree, buildProgressTree } from '../utils/decisionTreeUtils';
 
 export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: number = 8) => {
   const [state, setState] = useState<SolverState>({
@@ -220,6 +219,7 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
       // Update user decision tree
       userDecisionTree.current = moveHistory;
       const newDecisionTree = buildUserDecisionTree(moveHistory.map(node => node.state));
+      const newProgressTree = buildProgressTree(moveHistory.map(node => node.state));
 
       const newProgress = calculateProgress(newBoard, puzzleType);
       const maxProgress = Math.max(prevState.maxProgress, newProgress);
@@ -241,7 +241,8 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
         isUserSolved,
         progress: newProgress,
         maxProgress,
-        decisionTree: prevState.showDecisionTree ? newDecisionTree : []
+        decisionTree: prevState.showDecisionTree ? newDecisionTree : [],
+        progressTree: prevState.showDecisionTree ? newProgressTree : []
       };
     });
   }, [puzzleType]);
@@ -322,6 +323,9 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
 
       const decisionTree = prevState.showDecisionTree ? 
         buildRecursionTree(solutionSteps.current.slice(0, stepIndex.current + 1).map((step, idx) => ({ ...step, stepIndex: idx }))) : [];
+      
+      const progressTree = prevState.showDecisionTree ? 
+        buildProgressTree(solutionSteps.current.slice(0, stepIndex.current + 1).map((step, idx) => ({ ...step, stepIndex: idx }))) : [];
 
       const newStats = {
         ...prevState.stats,
@@ -337,6 +341,7 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
         currentState: stepWithIndex,
         violations,
         decisionTree,
+        progressTree,
         stats: newStats
       };
     });
@@ -374,21 +379,25 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
     setState(prev => {
       const newShowDecisionTree = !prev.showDecisionTree;
       let newDecisionTree = [];
+      let newProgressTree = [];
       
       if (newShowDecisionTree) {
         if (solutionSteps.current.length > 0) {
           // Auto-solve tree
           newDecisionTree = buildRecursionTree(solutionSteps.current.slice(0, stepIndex.current).map((step, idx) => ({ ...step, stepIndex: idx })));
+          newProgressTree = buildProgressTree(solutionSteps.current.slice(0, stepIndex.current).map((step, idx) => ({ ...step, stepIndex: idx })));
         } else if (userDecisionTree.current.length > 0) {
           // User move tree
           newDecisionTree = buildUserDecisionTree(userDecisionTree.current.map(node => node.state));
+          newProgressTree = buildProgressTree(userDecisionTree.current.map(node => node.state));
         }
       }
       
       return {
         ...prev,
         showDecisionTree: newShowDecisionTree,
-        decisionTree: newDecisionTree
+        decisionTree: newDecisionTree,
+        progressTree: newProgressTree
       };
     });
   }, []);
@@ -413,6 +422,7 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
       isComplete: false,
       violations: new Set(),
       decisionTree: [],
+      progressTree: [],
       userMoves: puzzleType === 'knights' ? 1 : 0,
       isUserSolved: false,
       progress: calculateProgress(initialBoard.current, puzzleType),
@@ -476,6 +486,7 @@ export const useDFSSolver = (puzzleType: string, difficulty: string, boardSize: 
     isComplete: state.isComplete,
     violations: state.violations,
     decisionTree: state.decisionTree,
+    progressTree: state.progressTree || [],
     userMoves: state.userMoves,
     isUserSolved: state.isUserSolved,
     progress: state.progress,

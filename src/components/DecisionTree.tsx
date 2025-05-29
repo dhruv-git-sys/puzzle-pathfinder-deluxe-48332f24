@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { GitBranch, Circle, CheckCircle, XCircle, User, Zap, ArrowDown, ArrowRight, RotateCcw, Play, ChevronDown, ChevronRight } from 'lucide-react';
+import { GitBranch, Circle, CheckCircle, XCircle, User, Zap, ArrowDown, ArrowRight, RotateCcw, Play, ChevronDown, ChevronRight, TreePine } from 'lucide-react';
 
 interface TreeNode {
   id: string;
@@ -19,11 +19,18 @@ interface DecisionTreeProps {
   tree: TreeNode[];
   currentState: any;
   isInteractive?: boolean;
+  progressTree?: TreeNode[];
 }
 
-export const DecisionTree: React.FC<DecisionTreeProps> = ({ tree, currentState, isInteractive = false }) => {
+export const DecisionTree: React.FC<DecisionTreeProps> = ({ 
+  tree, 
+  currentState, 
+  isInteractive = false,
+  progressTree = []
+}) => {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [autoExpand, setAutoExpand] = useState(true);
+  const [viewMode, setViewMode] = useState<'tree' | 'progress'>('tree');
 
   const toggleNode = (nodeId: string) => {
     const newExpanded = new Set(expandedNodes);
@@ -43,7 +50,7 @@ export const DecisionTree: React.FC<DecisionTreeProps> = ({ tree, currentState, 
         collectIds(node.children);
       });
     };
-    collectIds(tree);
+    collectIds(viewMode === 'tree' ? tree : progressTree);
     setExpandedNodes(allNodeIds);
   };
 
@@ -66,10 +73,84 @@ export const DecisionTree: React.FC<DecisionTreeProps> = ({ tree, currentState, 
           }
         });
       };
-      expandToCurrentState(tree);
+      expandToCurrentState(viewMode === 'tree' ? tree : progressTree);
       setExpandedNodes(newExpanded);
     }
-  }, [currentState, autoExpand]);
+  }, [currentState, autoExpand, viewMode, tree, progressTree]);
+
+  const renderProgressNode = (node: TreeNode, index: number) => {
+    const isCurrentStep = currentState && node.state?.stepIndex === currentState?.stepIndex;
+    const isOnSolutionPath = node.state?.isOnSolutionPath;
+    const isActive = currentState && node.state?.stepIndex <= (currentState?.stepIndex || 0);
+
+    const getStepColor = () => {
+      if (isCurrentStep) return 'bg-blue-600 border-blue-400 text-white';
+      if (node.isBacktrack) return 'bg-red-600/30 border-red-400 text-red-100';
+      if (isOnSolutionPath) return 'bg-green-600/30 border-green-400 text-green-100';
+      if (node.state?.action === 'try') return 'bg-yellow-600/30 border-yellow-400 text-yellow-100';
+      return 'bg-slate-600/30 border-slate-600 text-slate-300';
+    };
+
+    const getActionIcon = () => {
+      switch (node.state?.action) {
+        case 'try':
+          return <Circle className="w-3 h-3" />;
+        case 'place':
+          return <CheckCircle className="w-3 h-3" />;
+        case 'reject':
+          return <XCircle className="w-3 h-3" />;
+        case 'backtrack':
+        case 'backtrack_row':
+          return <RotateCcw className="w-3 h-3" />;
+        default:
+          return <Circle className="w-3 h-3" />;
+      }
+    };
+
+    return (
+      <div 
+        key={node.id} 
+        className={`transition-all duration-300 ${isActive ? 'opacity-100' : 'opacity-50'}`}
+      >
+        <div className="flex items-center gap-2 mb-1">
+          <div className={`flex items-center gap-2 p-2 rounded border transition-all duration-300 ${getStepColor()}`}>
+            {getActionIcon()}
+            
+            <div className="flex items-center gap-2 text-xs">
+              <span>#{node.state?.stepIndex + 1 || index + 1}</span>
+              
+              {node.state?.row !== undefined && node.state?.col !== undefined && (
+                <Badge variant="outline" className="text-xs border-current">
+                  ({node.state.row + 1}, {node.state.col + 1})
+                </Badge>
+              )}
+              
+              {node.state?.value !== undefined && node.state.value > 0 && (
+                <Badge variant="outline" className="text-xs border-current">
+                  = {node.state.value}
+                </Badge>
+              )}
+              
+              <Badge variant="outline" className="text-xs border-current">
+                {node.state?.action || 'step'}
+              </Badge>
+
+              {isCurrentStep && (
+                <Badge className="text-xs bg-blue-600 animate-pulse">
+                  Current
+                </Badge>
+              )}
+            </div>
+          </div>
+          
+          {/* Connection line to next step */}
+          {index < progressTree.length - 1 && (
+            <ArrowRight className="w-3 h-3 text-slate-500" />
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const renderNode = (node: TreeNode, depth: number = 0, isLast: boolean = false, parentPath: boolean[] = []) => {
     const isCurrentNode = isInteractive ? node.isCurrent : 
@@ -204,12 +285,17 @@ export const DecisionTree: React.FC<DecisionTreeProps> = ({ tree, currentState, 
     );
   };
 
+  const currentTree = viewMode === 'tree' ? tree : progressTree;
+  const hasData = currentTree.length > 0;
+
   return (
     <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-700 p-4 max-h-96 overflow-y-auto">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <GitBranch className="w-5 h-5 text-purple-400" />
-          <h3 className="font-semibold">Recursion Tree</h3>
+          <h3 className="font-semibold">
+            {viewMode === 'tree' ? 'Recursion Tree' : 'Progress Steps'}
+          </h3>
           {isInteractive && (
             <Badge variant="outline" className="border-blue-400 text-blue-400">
               <User className="w-3 h-3 mr-1" />
@@ -225,6 +311,15 @@ export const DecisionTree: React.FC<DecisionTreeProps> = ({ tree, currentState, 
         </div>
         
         <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setViewMode(viewMode === 'tree' ? 'progress' : 'tree')}
+            className="h-7 px-2 text-xs border-slate-600"
+          >
+            <TreePine className="w-3 h-3 mr-1" />
+            {viewMode === 'tree' ? 'Steps' : 'Tree'}
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -244,24 +339,30 @@ export const DecisionTree: React.FC<DecisionTreeProps> = ({ tree, currentState, 
         </div>
       </div>
       
-      {tree.length === 0 ? (
+      {!hasData ? (
         <div className="text-center py-4">
           <p className="text-slate-400 text-sm">
             {isInteractive ? 
-              "Make moves to see your recursion tree..." : 
+              "Make moves to see your decision tree..." : 
               "Tree will appear as algorithm explores..."
             }
           </p>
         </div>
       ) : (
         <div className="space-y-1 text-sm font-mono">
-          {tree.map((node, index) => 
-            renderNode(node, 0, index === tree.length - 1, [])
+          {viewMode === 'progress' ? (
+            <div className="space-y-1 max-h-64 overflow-y-auto">
+              {progressTree.map((node, index) => renderProgressNode(node, index))}
+            </div>
+          ) : (
+            currentTree.map((node, index) => 
+              renderNode(node, 0, index === currentTree.length - 1, [])
+            )
           )}
         </div>
       )}
       
-      {tree.length > 0 && (
+      {hasData && (
         <div className="mt-4 pt-3 border-t border-slate-600">
           <div className="grid grid-cols-2 gap-2 text-xs text-slate-400">
             <div className="flex items-center gap-1">
@@ -282,7 +383,7 @@ export const DecisionTree: React.FC<DecisionTreeProps> = ({ tree, currentState, 
             </div>
           </div>
           <div className="mt-2 text-xs text-slate-500">
-            <span>D = Depth level in recursion</span>
+            <span>{viewMode === 'tree' ? 'D = Depth level in recursion' : 'Sequential steps with backtracking'}</span>
           </div>
         </div>
       )}

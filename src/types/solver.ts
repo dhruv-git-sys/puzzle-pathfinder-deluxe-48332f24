@@ -24,6 +24,7 @@ export interface SolverState {
   isComplete: boolean;
   violations: Set<string>;
   decisionTree: TreeNode[];
+  progressTree?: TreeNode[];
   userMoves: number;
   isUserSolved: boolean;
   progress: number;
