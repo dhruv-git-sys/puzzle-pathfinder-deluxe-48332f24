@@ -58,7 +58,7 @@ Make sure you have the following installed:
 git clone https://github.com/dhruv-git-sys/puzzle-pathfinder-deluxe-48332f24.git
 
 # Step 2: Navigate into the project directory
-cd https://github.com/dhruv-git-sys/puzzle-pathfinder-deluxe-48332f24.git
+cd puzzle-pathfinder-deluxe-48332f24
 
 # Step 3: Install all dependencies
 npm install
