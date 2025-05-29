@@ -53,7 +53,6 @@ Make sure you have the following installed:
 ### 📥 Installation Steps
 
 1. **Clone the repository:**
-   ```bash
 ```sh
 # Step 1: Clone the repository
 git clone <YOUR_GIT_URL>
@@ -68,3 +67,4 @@ npm install
 npm run dev
 
 # Visit http://localhost:5173 to view the application
+```
